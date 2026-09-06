@@ -1,0 +1,31 @@
+# Fly.io config for ChessVerse.
+# Deploy:  fly launch --no-deploy  (only if you don't have an app yet)
+#          fly secrets set INSFORGE_API_KEY=ik_... SESSION_SECRET=...
+#          fly deploy
+app = "chessverse"
+primary_region = "bom"       # Mumbai — low latency for players in India
+kill_signal = "SIGINT"
+stop_signal = "SIGINT"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  HOST = "0.0.0.0"
+  PORT = "4000"
+  DB_MODE = "insforge"
+  INSFORGE_BASE_URL = "https://your-project.region.insforge.app"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    path = "/api/health"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"

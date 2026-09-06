@@ -1,0 +1,27 @@
+# Render Blueprint — one-click deploy for ChessVerse.
+# Connect this repo in Render and it will create the service automatically,
+# build the Docker image, and serve the realtime game on one URL.
+#
+# Render → New → Blueprint → select this repo. Then add the secret env vars below.
+services:
+  - type: web
+    name: chessverse
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 4000
+      - key: DB_MODE
+        value: insforge
+      - key: INSFORGE_BASE_URL
+        value: https://your-project.region.insforge.app
+      # Set these two as secrets in Render (do NOT commit real values).
+      - key: INSFORGE_API_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

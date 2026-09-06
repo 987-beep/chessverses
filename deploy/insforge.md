@@ -1,64 +1,63 @@
-# Deploying ChessVerse to Insforge
+# Deploying ChessVerse so it actually works
 
-This project is **already wired to your live Insforge project**:
+This is a **realtime multiplayer game**. The React site and the Node + Socket.IO
+game server must run together — the browser calls `/api/...` and opens a WebSocket
+to a **persistent** server that owns the game state (rooms, clocks, move validation).
 
-| Insforge piece | How ChessVerse uses it |
-|----------------|------------------------|
-| **Postgres** (`profiles`, `games`, `game_chat`, `friends`) | All game/account data is stored here (live, via the `rawsql` admin API) |
-| **Realtime** channels (`lobby`, `online`, `game:%`) | The app’s *own* Socket.IO layer is used for the live move/broadcast protocol |
-| **Auth** | Email/password accounts are implemented in-app (scrypt hashing, signed tokens) storing to `profiles` |
+> Vercel's static hosting can't run that persistent server, so a direct Vercel
+> deploy of the *site only* will 404 and the game won't connect. Fix: host the
+> whole app as **one container** using the bundled `Dockerfile`.
 
-> Your Insforge DB is already created with the right schema (tables `profiles`, `games`, `game_chat`, `friends`).
-> The old test tables were dropped and recreated fresh.
+## Recommended: host everything as one container (works out of the box)
 
-## The one thing to understand about the realtime layer
-This game uses a **persistent Node + Socket.IO server** so that the server can be the single source of truth for a game's position, clocks, and move validation. Insforge’s stateless **Deno edge functions** and **static site hosting** cannot hold a long-lived game session or a persistent WebSocket room, which is exactly what server-authoritative chess needs.
+The repo ships with a root `Dockerfile` that:
+1. builds the React client, and
+2. runs the game server which serves that client **and** Socket.IO on **one origin**.
 
-So the recommended topology is:
+So the browser always talks to the same origin — no CORS, no `VITE_SERVER_URL` needed.
 
+### Option A — Render (one click, has a free tier)
+1. Push this repo to GitHub (done). In **Render → New → Blueprint**, select this repo.
+   It reads `render.yaml` and creates a web service automatically.
+2. In the service's **Environment**, set these:
+   - `INSFORGE_BASE_URL` = `https://your-project.region.insforge.app`
+   - `INSFORGE_API_KEY` = *(your real key)* — mark as **Secret**
+   - `SESSION_SECRET` = *(a long random string)*
+3. **Deploy**. Render gives a public URL that serves the realtime game.
+   *(If you skip the Blueprint, instead create a **Web Service → Docker** and set the
+   env vars above; Render auto-detects the root `Dockerfile`.)*
+
+### Option B — Fly.io (fast, low latency, free-ish)
+```bash
+fly launch --no-deploy --name chessverse
+fly secrets set INSFORGE_API_KEY=ik_... SESSION_SECRET="$(openssl rand -hex 24)"
+fly deploy
 ```
-Browser  ──WebSocket/HTTP──▶  Your Node server  ──Insforge API──▶  Insforge Postgres
-                                    (serves the built React client + Socket.IO)
-```
+`fly.toml` already sets the region (Mumbai, good for India), the port, and a
+`/api/health` check.
 
-The Node server both **serves the frontend** and **hosts the realtime game rooms**, while **Insforge stays the durability layer** (all data persisted to your live Postgres).
+### Option C — Railway
+New Project → Deploy from GitHub repo → enter the env vars → deploy. Railway
+auto-detects the root `Dockerfile`.
 
-## Option A — Run the container anywhere (recommended)
-1. Build the image (see `deploy/Dockerfile`) or run directly:
-   ```bash
-   npm install && node server/index.js
-   ```
-2. Set the required Insforge env vars (this is already the default):
-   ```bash
-   INSFORGE_BASE_URL=https://your-project.region.insforge.app
-   INSFORGE_API_KEY=ik_your-insforge-api-key-here
-   DB_MODE=insforge
-   PORT=4000
-   SESSION_SECRET=<your-random-secret>
-   ```
-3. Run it on any container host that gives you a public origin (Render, Railway, Fly.io, a VPS, or Insforge compute if containers are enabled). It listens on `0.0.0.0:4000`.
+## Option D — Keep Vercel for the site + a separate backend
+Only if you specifically want the static frontend on Vercel:
+1. Host the backend (the `Dockerfile`) on Render/Railway/Fly → get `https://backend-url`.
+2. In **Vercel** settings: **Root Directory = `client`**, Framework preset **Vite**,
+   Build = `npm run build`, Output = `dist`. (A `client/vercel.json` is included.)
+3. Add a Vercel env var: `VITE_SERVER_URL = https://backend-url`.
+   The client is already coded to read it and route all `/api` + Socket.IO calls there.
 
-That’s it — once it’s up, the site **and** the realtime game protocol are on the same origin, so the browser’s `fetch('/api/...')` and Socket.IO `io()` calls just work.
-
-## Option B — Fully serverless on Insforge (more work)
-If you specifically need everything to run as Insforge edge functions + realtime channels (no persistent container), swap the in-memory rooms for the **Insforge realtime channels** as the transport and run move validation in a **Deno edge function**:
-
-1. Deploy a function `validate-move` that reads the current FEN from `games`, applies the move via `chess.js`, rejects if illegal, writes the new FEN back, and `publish`es to the `game:<id>` channel.
-2. The client subscribes to `game:<id>` for updates and calls `validate-move` on every attempt.
-
-This keeps everything on Insforge compute, at the cost of: more chatty traffic, having to implement game-over/timeout handling in a stateless context, and a small delay per move. The **server-authoritative** guarantee is preserved (validation still happens in `validate-move`).
-
-## Env-reference
+## Env variables
 | Var | Purpose |
 |-----|---------|
-| `INSFORGE_BASE_URL` | Your project URL (e.g. `https://your-project.region.insforge.app`) |
-| `INSFORGE_API_KEY` | Anon/API key (`ik_...`) |
+| `INSFORGE_BASE_URL` | Your project URL |
+| `INSFORGE_API_KEY` | Anon/API key (keep as a **secret**) |
 | `DB_MODE` | `insforge` (live) or `memory` (dev) |
-| `PORT` / `HOST` | HTTP listen port / host (`0.0.0.0`) |
-| `SESSION_SECRET` | Secret used to sign auth tokens (change it!) |
+| `PORT` / `HOST` | `4000` / `0.0.0.0` |
+| `SESSION_SECRET` | Signing secret (random string) |
+| `VITE_SERVER_URL` | (Vercel split-host only) backend origin |
 
-## Schema already created on Insforge
-- `profiles(id, user_id, email, username, display_name, avatar_url, password_hash, country, bio, elo, wins, losses, draws, games_played, created_at, updated_at)`
-- `games(id, code, host_id, guest_id, host_color, fen, pgn, moves, status, time_base, increment, white_ms, black_ms, last_move, winner, over_reason, turn_started_at, created_at, updated_at)`
-- `game_chat(id, game_id, user_id, text, created_at)`
-- `friends(id, user_id, friend_id, status, created_at)`
+## Verify after deploy
+- `GET /api/health` → `{"ok":true,...}`
+- Open the site → Play as Guest → Create/Join a room in two tabs → the game plays.
