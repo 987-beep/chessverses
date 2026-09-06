@@ -208,6 +208,23 @@ function findRoomByCode(code) {
   return null;
 }
 
+// Send the current authoritative game state to every socket in a room, each with
+// its own `youAre` color. Crucial: when the second player joins and the game
+// starts, the player who created the room must ALSO be notified (otherwise they
+// stay stuck on "Waiting" and nobody can move since it's their turn).
+function emitJoined(room, io) {
+  for (const c of ['w', 'b']) {
+    const p = room.players[c];
+    if (!p || !p.socketId) continue;
+    const s = io.sockets.sockets.get(p.socketId);
+    if (s) s.emit('game:joined', { game: gm.roomPublic(room, s.data.user), youAre: c });
+  }
+  for (const sid of room.spectators.keys()) {
+    const s = io.sockets.sockets.get(sid);
+    if (s) s.emit('game:joined', { game: gm.roomPublic(room, s.data.user), youAre: null, spectating: true });
+  }
+}
+
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 app.use(express.static(clientDist));
 app.get(/^(?!\/api|\/socket\.io).*/, (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
@@ -388,7 +405,9 @@ io.on('connection', (socket) => {
     await swapSocket(room, socket, color);
     socket.join(`game:${room.id}`);
     gm.startGame(io, room);
-    socket.emit('game:joined', { game: gm.roomPublic(room, user), youAre: color });
+    // Notify BOTH players (and any spectators) with their own color — this is what
+    // makes the game actually begin on the host's screen too.
+    emitJoined(room, io);
     if (room.status === 'playing' && room.players.b) {
       try {
         await db.updateGame(room.id, { guest_id: room.players.b.id, status: 'playing', turn_started_at: room.timeStartedAt ? new Date(room.timeStartedAt).toISOString() : null });
