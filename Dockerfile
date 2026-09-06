@@ -12,8 +12,12 @@ RUN cd client && npm install
 COPY client/ ./client/
 RUN cd client && npm run build
 
+# Copy the server package manifest first (better layer caching), install deps,
+# THEN copy the actual server source. (The previous version forgot this and the
+# runtime image had no server/index.js, causing 'Cannot find module'.)
 COPY server/package.json server/package-lock.json* ./server/
 RUN cd server && npm install
+COPY server/ ./server/
 
 FROM node:20-alpine AS runtime
 WORKDIR /app

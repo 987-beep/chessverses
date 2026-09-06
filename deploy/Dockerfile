@@ -10,9 +10,10 @@ RUN cd client && npm install
 COPY client/ ./client/
 RUN cd client && npm run build
 
-# Install server deps
+# Install server deps, then copy server source (required so the runtime image has index.js)
 COPY server/package.json server/package-lock.json* ./server/
 RUN cd server && npm install
+COPY server/ ./server/
 
 # Runtime image
 FROM node:20-alpine AS runtime
