@@ -1,0 +1,12 @@
+{
+  "name": "chessverse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Realtime multiplayer chess with server-authoritative rules, persisted to Insforge Postgres",
+  "scripts": {
+    "setup": "cd server && npm install && cd ../client && npm install",
+    "build:client": "cd client && npm run build",
+    "start": "cd server && node index.js",
+    "dev": "cd server && node --watch index.js"
+  }
+}
