@@ -1,0 +1,34 @@
+# Keep the Render free-tier instance awake.
+# Render spins down free web services after ~15 min of inactivity, which is bad
+# for a realtime game (in-memory game rooms reset on cold start). This workflow
+# pings the deployed URL every few minutes so it never idles for 15 min.
+#
+# GitHub Actions is FREE and has unlimited minutes for public repositories,
+# so this costs nothing.
+#
+# To point this at a different URL, update the RENDER_URL env below (or set it
+# as a repo/org secret named RENDER_URL).
+name: Keep-alive (Render)
+
+on:
+  schedule:
+    # Every 5 minutes.
+    - cron: "*/5 * * * *"
+  # Allow a manual trigger from the Actions tab.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the live site so Render stays awake
+        run: |
+          URL="${RENDER_URL:-https://chessverse-gxjx.onrender.com}"
+          echo "Pinging $URL"
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$URL/api/health")
+          echo "HTTP $code"
+          # Consider it a success (exit 0) even on 404/500 so the ping still
+          # counts as traffic to wake the instance; we only want the request hit.
+          exit 0
+        env:
+          RENDER_URL: https://chessverse-gxjx.onrender.com
