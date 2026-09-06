@@ -3,7 +3,7 @@ import { Chessboard } from 'react-chessboard';
 
 export default function ChessboardView({
   fen, orientation = 'white', canMove, myColor, lastMove, onMove, onPromotion, onSelectSquare, selected,
-  interactive = true,
+  legalMoves = [], interactive = true,
 }) {
   // Highlight the squares of the last move (from/to).
   const highlight = useMemo(() => {
@@ -13,8 +13,19 @@ export default function ChessboardView({
       s[lastMove.to] = { backgroundColor: 'rgba(244,197,66,.42)' };
     }
     if (selected) s[selected] = { backgroundColor: 'rgba(244,197,66,.55)' };
+
+    // "Show hints" — mark every square a selected piece can legally move to.
+    // Empty targets get a translucent dot; capturable targets get a ring.
+    const DOT = 'radial-gradient(circle, rgba(0,0,0,.25) 24%, rgba(0,0,0,0) 25%)';
+    for (const m of legalMoves) {
+      if (m.capture) {
+        s[m.to] = { boxShadow: 'inset 0 0 0 4px rgba(0,0,0,.22)' };
+      } else if (!s[m.to]) {
+        s[m.to] = { backgroundImage: DOT };
+      }
+    }
     return s;
-  }, [lastMove, selected]);
+  }, [lastMove, selected, legalMoves]);
 
   const handleDrop = (source, target, piece) => {
     if (!interactive || !canMove) return false;
@@ -31,7 +42,7 @@ export default function ChessboardView({
       boardOrientation={orientation}
       showPromotionDialog
       arePiecesDraggable={interactive && canMove}
-      animationDuration={180}
+      animationDuration={120}
       boardWidth={Math.min(560, typeof window !== 'undefined' ? window.innerWidth - 40 : 560)}
       customBoardStyle={{ borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,.45)', overflow: 'hidden' }}
       customDarkSquareStyle={{ backgroundColor: '#769656' }}

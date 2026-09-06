@@ -18,6 +18,8 @@ export default function GameScreen({ game, chat, socket, onToast }) {
   const status = game.status;
   const [boardFen, setBoardFen] = useState(game.fen);
   const [selected, setSelected] = useState(null);
+  const [legalMoves, setLegalMoves] = useState([]);
+  const [showHints, setShowHints] = useState(true);
   const [lastMove, setLastMove] = useState(game.lastMove);
   const [votes, setVotes] = useState([]);
   const [chatInput, setChatInput] = useState('');
@@ -28,6 +30,9 @@ export default function GameScreen({ game, chat, socket, onToast }) {
   useEffect(() => {
     if (game.fen) { prevFenRef.current = game.fen; setBoardFen(game.fen); }
     setLastMove(game.lastMove);
+    // When the authoritative position changes (opponent moved or game over),
+    // clear any local selection/hint state.
+    setSelected(null); setLegalMoves([]);
   }, [game.fen, game.lastMove, game.id]);
 
   // scroll chat
@@ -46,6 +51,15 @@ export default function GameScreen({ game, chat, socket, onToast }) {
     } catch { return null; }
   }
 
+  // Compute the legal moves for a square from the current (displayed) position.
+  // Used for the "show hints" move-highlighting.
+  function legalMovesFor(square) {
+    try {
+      const c = new Chess(prevFenRef.current);
+      return c.moves({ square, verbose: true }).map((m) => ({ to: m.to, capture: !!m.captured, san: m.san }));
+    } catch { return []; }
+  }
+
   function handleMove(from, to, promotion) {
     if (!canMove) return;
     const pred = predictFen(from, to, promotion);
@@ -59,6 +73,7 @@ export default function GameScreen({ game, chat, socket, onToast }) {
       }
     });
     setSelected(null);
+    setLegalMoves([]);
   }
 
   function handlePromotion(piece, from, to) {
@@ -69,7 +84,23 @@ export default function GameScreen({ game, chat, socket, onToast }) {
 
   function handleSelect(square) {
     if (!canMove) return;
-    setSelected((s) => (s === square ? null : square));
+    // If we already have a selected piece and click one of its legal targets, move there.
+    if (selected) {
+      const target = legalMoves.find((m) => m.to === square);
+      if (target) { handleMove(selected, square, undefined); return; }
+    }
+    // Toggle selection off if clicking the same square.
+    if (selected === square) { setSelected(null); setLegalMoves([]); return; }
+    setSelected(square);
+    setLegalMoves(showHints ? legalMovesFor(square) : []);
+  }
+
+  function toggleHints() {
+    const next = !showHints;
+    setShowHints(next);
+    // Update the highlighted moves for the current selection.
+    if (selected) setLegalMoves(next ? legalMovesFor(selected) : []);
+    else setLegalMoves([]);
   }
 
   const opponentColor = myColor === null ? null : (myColor === 'w' ? 'b' : 'w');
@@ -110,10 +141,17 @@ export default function GameScreen({ game, chat, socket, onToast }) {
           interactive={!!myColor}
           lastMove={lastMove}
           selected={selected}
+          legalMoves={legalMoves}
           onMove={handleMove}
           onPromotion={handlePromotion}
           onSelectSquare={handleSelect}
         />
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', width: '100%', maxWidth: 560, justifyContent: 'center' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={showHints} onChange={toggleHints} />
+            Show hints (click a piece to see its moves)
+          </label>
+        </div>
         <PlayerBar player={bottom === 'w' ? game.white : game.black} clock={game.clocks?.[bottom]} active={status === 'playing' && game.turn === bottom} you={myColor === bottom} />
         <Controls game={game} socket={socket} disabled={!myColor} />
       </div>
