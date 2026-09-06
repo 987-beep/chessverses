@@ -1,8 +1,10 @@
 import { io } from 'socket.io-client';
+import { SERVER_URL } from './config.js';
 
-// Connect to the same origin (served by the backend). Uses relative URL so it works
-// both in dev (via Vite proxy) and in production / live preview.
-export const socket = io({
+// Connect to the backend. When split-hosted (Vercel frontend + separate backend)
+// SERVER_URL points at the backend origin; otherwise it connects to the same
+// origin that served us (the Node game server / live preview).
+export const socket = io(SERVER_URL || undefined, {
   autoConnect: true,
   transports: ['websocket', 'polling'],
   reconnection: true,

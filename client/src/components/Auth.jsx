@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { api } from '../config.js';
 
 export default function Auth({ onAuthed, onGuest }) {
   const [mode, setMode] = useState('login');
@@ -13,7 +14,7 @@ export default function Auth({ onAuthed, onGuest }) {
     e.preventDefault();
     setErr(''); setBusy(true);
     try {
-      const res = await fetch('/api/auth/' + (mode === 'login' ? 'login' : 'register'), {
+      const res = await fetch(api('/auth/' + (mode === 'login' ? 'login' : 'register')), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, username, display_name: name }),
       });

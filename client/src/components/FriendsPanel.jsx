@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { tierForElo, gradeLabel } from '../rank.js';
+import { api } from '../config.js';
 
 export default function FriendsPanel({ token, socket, onInvite, onToast }) {
   const [friends, setFriends] = useState([]);
@@ -15,8 +16,8 @@ export default function FriendsPanel({ token, socket, onInvite, onToast }) {
     try {
       const h = { Authorization: `Bearer ${token}` };
       const [f, req] = await Promise.all([
-        fetch('/api/friends', { headers: h }).then((r) => r.json()),
-        fetch('/api/friends/requests', { headers: h }).then((r) => r.json()),
+        fetch(api('/friends'), { headers: h }).then((r) => r.json()),
+        fetch(api('/friends/requests'), { headers: h }).then((r) => r.json()),
       ]);
       setFriends(f.friends || []);
       setIncoming(req.incoming || []);
@@ -30,7 +31,7 @@ export default function FriendsPanel({ token, socket, onInvite, onToast }) {
     if (!query.trim()) return;
     setBusy(true);
     try {
-      const res = await fetch('/api/friends/request', {
+      const res = await fetch(api('/friends/request'), {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ username: query.trim() }),
       });
@@ -43,7 +44,7 @@ export default function FriendsPanel({ token, socket, onInvite, onToast }) {
   }
 
   async function post(path, body) {
-    await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+    await fetch(api(path), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
     refresh();
   }
 
@@ -97,7 +98,7 @@ export default function FriendsPanel({ token, socket, onInvite, onToast }) {
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button className="btn small green" disabled={!f.online} onClick={() => challenge(f)}>Play</button>
-                    <button className="btn small ghost" onClick={async () => { await fetch(`/api/friends/${f.friend_user_id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }); refresh(); }}>✕</button>
+                    <button className="btn small ghost" onClick={async () => { await fetch(api(`/friends/${f.friend_user_id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }); refresh(); }}>✕</button>
                   </div>
                 </div>
               );

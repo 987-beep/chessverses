@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { tierForElo, TIERS } from '../rank.js';
+import { api } from '../config.js';
 
 export default function RankingPanel({ token, me }) {
   const [board, setBoard] = useState([]);
@@ -11,11 +12,11 @@ export default function RankingPanel({ token, me }) {
   async function load() {
     setLoading(true);
     try {
-      const b = await fetch('/api/leaderboard').then((r) => r.json());
+      const b = await fetch(api('/leaderboard')).then((r) => r.json());
       setBoard(b);
       if (me && !me.guest) {
         // my profile endpoint gives rank position + grade
-        const p = await fetch(`/api/profile/${me.username}`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json());
+        const p = await fetch(api(`/profile/${me.username}`), { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json());
         if (p.profile) {
           setMyPos(p.rank?.position);
           setTotal(p.rank?.total);

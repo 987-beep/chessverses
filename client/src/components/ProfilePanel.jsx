@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { tierForElo } from '../rank.js';
+import { api } from '../config.js';
 
 export default function ProfilePanel({ token, me, onToast }) {
   const [games, setGames] = useState([]);
@@ -11,9 +12,9 @@ export default function ProfilePanel({ token, me, onToast }) {
     (async () => {
       setLoading(true);
       try {
-        const p = await fetch(`/api/profile/${me.username}`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json());
+        const p = await fetch(api(`/profile/${me.username}`), { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json());
         if (p.rank) { setPos(p.rank.position); setTotal(p.rank.total); }
-        const g = await fetch(`/api/profile/${me.username}/games`).then((r) => r.json());
+        const g = await fetch(api(`/profile/${me.username}/games`)).then((r) => r.json());
         setGames(g.games || []);
       } catch {}
       setLoading(false);
