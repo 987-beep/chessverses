@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+dist
+**/dist
+**/build
+.git
+.gitignore
+backup
+Dockerfile
+deploy
+*.log
+.env
+**/.env
+.render
+render.yaml
+fly.toml
+vite.config.js

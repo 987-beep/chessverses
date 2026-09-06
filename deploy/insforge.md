@@ -16,16 +16,24 @@ The repo ships with a root `Dockerfile` that:
 
 So the browser always talks to the same origin — no CORS, no `VITE_SERVER_URL` needed.
 
-### Option A — Render (one click, has a free tier)
+### Option A — Render (native Node runtime — recommended)
+This app deploys most reliably on Render with its **native Node runtime** (no Docker),
+which builds the React client and runs the game server directly. Render supports
+WebSockets, so the realtime Socket.IO layer works fine.
+
 1. Push this repo to GitHub (done). In **Render → New → Blueprint**, select this repo.
-   It reads `render.yaml` and creates a web service automatically.
-2. In the service's **Environment**, set these:
-   - `INSFORGE_BASE_URL` = `https://your-project.region.insforge.app`
+   It reads `render.yaml` (runtime: node) and creates a web service automatically.
+2. In the service's **Environment**, set:
+   - `INSFORGE_BASE_URL` = `https://your-project.region.insforge.app`  ← **must be your real URL**
    - `INSFORGE_API_KEY` = *(your real key)* — mark as **Secret**
-   - `SESSION_SECRET` = *(a long random string)*
-3. **Deploy**. Render gives a public URL that serves the realtime game.
-   *(If you skip the Blueprint, instead create a **Web Service → Docker** and set the
-   env vars above; Render auto-detects the root `Dockerfile`.)*
+   - `SESSION_SECRET` — auto-generated, leave it
+3. **Deploy**. Render builds (`cd client && npm install && npm run build && cd ../server && npm install`)
+   and starts `node server/index.js`. You get a public URL that serves the realtime game.
+
+> If the Docker build previously failed with "Cannot find module /app/server/index.js",
+> that's because the Docker image build path was wrong. Switching to native Node
+> runtime avoids Docker entirely and fixes it.
+> *(A root `Dockerfile` is still committed for Railway/Fly, which is reliable there.)*
 
 ### Option B — Fly.io (fast, low latency, free-ish)
 ```bash
