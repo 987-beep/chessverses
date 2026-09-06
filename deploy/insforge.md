@@ -27,13 +27,17 @@ WebSockets, so the realtime Socket.IO layer works fine.
    - `INSFORGE_BASE_URL` = `https://your-project.region.insforge.app`  ← **must be your real URL**
    - `INSFORGE_API_KEY` = *(your real key)* — mark as **Secret**
    - `SESSION_SECRET` — auto-generated, leave it
-3. **Deploy**. Render builds (`cd client && npm install && npm run build && cd ../server && npm install`)
+3. **Deploy**. Render builds (`cd client && npm install --include=dev && npm run build && cd ../server && npm install`)
    and starts `node server/index.js`. You get a public URL that serves the realtime game.
 
+> **Why `--include=dev`?** Render sets `NODE_ENV=production`, which makes plain `npm install`
+> skip devDependencies — including `vite` — causing `vite: not found` / build failure.
+> `--include=dev` forces them in for the build.
+>
 > If the Docker build previously failed with "Cannot find module /app/server/index.js",
-> that's because the Docker image build path was wrong. Switching to native Node
-> runtime avoids Docker entirely and fixes it.
-> *(A root `Dockerfile` is still committed for Railway/Fly, which is reliable there.)*
+> that was a Dockerfile bug (server source wasn't copied) — now fixed. We use native
+> Node runtime on Render to avoid Docker entirely. *(A corrected root `Dockerfile` is
+> still committed for Railway/Fly.)*
 
 ### Option B — Fly.io (fast, low latency, free-ish)
 ```bash

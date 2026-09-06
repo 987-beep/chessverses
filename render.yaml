@@ -1,24 +1,24 @@
-# Render Blueprint for ChessVerse — uses Render's native Node runtime.
-# (Native Node is more reliable than Docker for this app, and Render fully
-#  supports WebSockets for our realtime Socket.IO layer.)
+# Render Blueprint for ChessVerse — Render's native Node runtime.
+# (Native Node is reliable here, and Render supports WebSockets for realtime.)
 #
 # Render → New → Blueprint → select this repo. It creates the service from here.
 # Then set INSFORGE_BASE_URL to your real project URL (see below).
+#
+# NOTE on the install command: Render sets NODE_ENV=production, which makes plain
+# `npm install` SKIP devDependencies (e.g. vite). We use `--include=dev` so the
+# client build toolchain actually installs, then build, then install server deps.
 services:
   - type: web
     name: chessverse
     runtime: node
     plan: free
-    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
+    buildCommand: cd client && npm install --include=dev && npm run build && cd ../server && npm install
     startCommand: node server/index.js
     healthCheckPath: /api/health
     envVars:
-      - key: NODE_ENV
-        value: production
+      # Render auto-provides PORT so we do NOT set it here.
       - key: HOST
         value: 0.0.0.0
-      - key: PORT
-        value: 4000
       - key: DB_MODE
         value: insforge
       # Placeholder — set this to your real value in the dashboard (repo is public).
