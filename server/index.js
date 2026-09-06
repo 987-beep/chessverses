@@ -226,7 +226,15 @@ function emitJoined(room, io) {
 }
 
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
-app.use(express.static(clientDist));
+app.use(express.static(clientDist, {
+  setHeaders: (res, filePath) => {
+    // Serve the web app manifest with the correct MIME type regardless of the
+    // platform's mime database so browsers accept it for PWA installability.
+    if (filePath.endsWith('.webmanifest')) {
+      res.setHeader('Content-Type', 'application/manifest+json');
+    }
+  },
+}));
 app.get(/^(?!\/api|\/socket\.io).*/, (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
 
 // Normalize a time-control value, preserving explicit 0 (0 is falsy so `||` breaks it).

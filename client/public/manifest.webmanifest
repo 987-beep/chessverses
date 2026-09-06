@@ -1,0 +1,40 @@
+{
+  "name": "ChessVerse — Multiplayer Chess",
+  "short_name": "ChessVerse",
+  "description": "Play realtime multiplayer chess with friends, ratings, clocks, chat and more.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1c1b1a",
+  "theme_color": "#1c1b1a",
+  "lang": "en",
+  "categories": ["games", "board_games", "entertainment"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Play a game",
+      "url": "/",
+      "description": "Start a new chess game"
+    }
+  ]
+}
